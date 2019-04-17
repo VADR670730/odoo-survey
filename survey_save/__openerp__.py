@@ -18,7 +18,7 @@ Adds meta-data to make it possible to save
 forms to records.
 
 Question is expanded with fields_name, the attribute name that stores the
-answer. Questions with identical fields_name of text-type will be concatenated. 
+answer. Questions with identical fields_name of text-type will be concatenated.
 For example Fist_name (name), Last_name (name) will save a string
 "First Last" in the attribute name. Fields_names with punctuation writes
 data in related records. For example partner_id.street is a valid statement.
@@ -33,11 +33,11 @@ an attribute partner_id, a record for partner_id has the attribute for key.
 
 The method save_values(save_record) saves the record from get_values(). The
 save_record parameter is a string that names the attribute on answer-record.
-The idea is that the answer is related to the replicant using an attribute 
+The idea is that the answer is related to the replicant using an attribute
 on the answer (survey.user_input).
-  
+
 class WebsiteSurvey(WebsiteSurvey):
-    
+
     @http.route(['/survey/submit/<model("survey.survey"):survey>'], type='http', methods=['POST'], auth='public', website=True)
     def submit(self, survey, **post):
         res = super(WebsiteSurvey, self).submit(survey, **post)
@@ -53,7 +53,6 @@ class WebsiteSurvey(WebsiteSurvey):
     'depends': ['survey',],
     'data': [
         'survey_view.xml',
-        # ~ 'security/rules.xml',
        ],
     'installable': True,
 }

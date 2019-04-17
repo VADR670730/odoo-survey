@@ -1,1 +1,1 @@
-import hr_onboarding
+import survey
