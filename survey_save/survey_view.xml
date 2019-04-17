@@ -11,13 +11,6 @@
                         <field name="fields_name" />
                     </group>
                 </page>
-            </field>
-        </record>
-        <record model="ir.ui.view" id="survey_question_form">
-            <field name="name">Form view for survey question</field>
-            <field name="model">survey.question</field>
-            <field name="inherit_id" ref="survey.survey_question_form" />
-            <field name="arch" type="xml">
                 <field name="quizz_mark" position="before">
                     <field name="tecnical_value" />
                 </field>
