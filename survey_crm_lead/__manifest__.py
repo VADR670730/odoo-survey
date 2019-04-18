@@ -32,7 +32,7 @@ Financed by Netprospekt
     'author': 'Vertel AB',
     'license': 'AGPL-3',
     'website': 'http://www.vertel.se',
-    'depends': ['crm', ],
+    'depends': ['crm_phonecall', 'survey'],
     'data': [
         'crm_view.xml',
     ],

@@ -26,12 +26,12 @@ _logger = logging.getLogger(__name__)
 class crm_lead(models.Model):
     _inherit = 'crm.lead'
 
-    survey_ids = fields.One2many(comodel_name='survey.user_input',inverse='lead_id')
+    survey_ids = fields.One2many(comodel_name='survey.user_input',inverse_name='lead_id')
 
 class crm_phonecall(models.Model):
     _inherit = 'crm.phonecall'
 
-    survey_ids = fields.One2many(comodel_name='survey.user_input',inverse='phonecall_id')
+    survey_ids = fields.One2many(comodel_name='survey.user_input',inverse_name='phonecall_id')
 
     @api.multi
     def action_make_survey(self):
@@ -69,7 +69,7 @@ class crm_phonecall(models.Model):
 class res_partner(models.Model):
     _inherit = 'res.partner'
 
-    survey_ids = fields.One2many(comodel_name='survey.user_input',inverse='partner_id')
+    survey_ids = fields.One2many(comodel_name='survey.user_input',inverse_name='partner_id')
 
 
 class survey_user_input(models.Model):
