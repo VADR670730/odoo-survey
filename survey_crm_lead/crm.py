@@ -27,11 +27,24 @@ class crm_lead(models.Model):
     _inherit = 'crm.lead'
 
     survey_ids = fields.One2many(comodel_name='survey.user_input',inverse_name='lead_id')
+    @api.one
+    def _compute_survey_count(self):
+        self.survey_count = self.env['survey.user_input'].search_count([('lead_id', '=', self.id)])
+    survey_count = fields.Integer(compute='_compute_survey_count',string="Surveys",)
+
+
+
+
 
 class crm_phonecall(models.Model):
     _inherit = 'crm.phonecall'
 
     survey_ids = fields.One2many(comodel_name='survey.user_input',inverse_name='phonecall_id')
+    @api.one
+    def _compute_survey_count(self):
+        self.survey_count = self.env['survey.user_input'].search_count([('phonecall_id', '=', self.id)])
+    survey_count = fields.Integer(compute='_compute_survey_count',string="Surveys",)
+
 
     @api.multi
     def action_make_survey(self):
@@ -43,34 +56,55 @@ class crm_phonecall(models.Model):
         this else list surveys. (res.partner if we come from res.partner)
         
         """
-        partner_ids = [
-            self.env['res.users'].browse(self.env.uid).partner_id.id]
-        res = {}
-        for phonecall in self:
-            if phonecall.partner_id and phonecall.partner_id.email:
-                partner_ids.append(phonecall.partner_id.id)
-            res = self.env['ir.actions.act_window'].for_xml_id(
-                'calendar', 'action_calendar_event')
-            res['context'] = {
-                'default_phonecall_id': phonecall.id,
-                'default_partner_ids': partner_ids,
-                'default_user_id': self.env.uid,
-                'default_email_from': phonecall.email_from,
-                'default_name': phonecall.name,
+        self.ensure_one()
+        _logger.warn('context %s' % self._context)        
+        return {
+                'type': 'ir.actions.act_window',
+                'name':  'act_survey_wizard',
+                'key2': 'client_action_multi',
+                'res_model': 'crm.phonecall.survey.wizard',
+                # ~ 'res_id': ,
+                'view_type': 'form',
+                'view_mode': 'form',
+                # ~ 'view_id': self.onboard_stage_id.view_id.id,
+                'target': 'new',
+                'context': self._context,
             }
-            """
-                default_lead_id, default_phonecall_id, default_partner_id
             
-            """
             
-        return res
+            
+        
+class crm_phonecall_survey_wizard(models.TransientModel):
+    _name = 'crm.phonecall.survey.wizard'
+
+    survey_id = fields.Many2one(comodel_name='survey.survey',domain=([('stage_id.closed','=',False)]))
+    # ~ survey_id = fields.Many2one(comodel_name='survey.survey',domain=([('model_id.name','=','crm.phonecall'),('stage_id.closed','=',False)]))
+    # ~ survey_id = fields.Many2one(comodel_name='survey.survey',domain=([('model_id.name','=','crm.phonecall'),]))
+    
+    @api.multi
+    def confirm(self):
+        self.ensure_one()
+        _logger.warn('context %s' % self._context)
+        if self._context.get('default_opportunity_id'):
+            response = self.env['survey.user_input'].create({'survey_id': self.survey_id.id, 'lead_id': self._context.get('default_opportunity_id'), 'phonecall_id': self._context.get('active_id')})
+            # ~ response = self.env['survey.user_input'].create({'survey_id': self.survey_id.id, 'lead_id': self._context.get('default_opportunity_id')})
+        elif self._context.get('default_lead_id'):
+            response = self.env['survey.user_input'].create({'survey_id': self.survey_id.id, 'lead_id': self._context.get('default_lead_id'), 'phonecall_id': self._context.get('active_id')})
+        elif self._context.get('default_partner_id'):
+            response = self.env['survey.user_input'].create({'survey_id': self.survey_id.id, 'partner_id': self._context.get('default_partner_id'), 'phonecall_id': self._context.get('active_id')})
+        else:
+            raise Warning('context %s' % self._context)
+        return self.survey_id.with_context(survey_token=response.token).action_start_survey()
 
 
 class res_partner(models.Model):
     _inherit = 'res.partner'
 
     survey_ids = fields.One2many(comodel_name='survey.user_input',inverse_name='partner_id')
-
+    @api.one
+    def _compute_survey_count(self):
+        self.survey_count = self.env['survey.user_input'].search_count([('partner_id', '=', self.id)])
+    survey_count = fields.Integer(compute='_compute_survey_count',string="Surveys",)
 
 class survey_user_input(models.Model):
     _inherit = 'survey.user_input'
@@ -82,3 +116,9 @@ class survey_user_input(models.Model):
     # ~ _inherit = 'survey.survey'
 
     # ~ fields_name = fields.Char(string='Fields Name', help='The fields will be used to save survey question.')
+
+
+class survey_survey(models.Model):
+    _inherit = 'survey.survey'
+
+    model_id = fields.Many2one(comodel_name='ir.model')
