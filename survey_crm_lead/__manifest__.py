@@ -35,6 +35,7 @@ Financed by Netprospekt
     'depends': ['crm_phonecall', 'survey'],
     'data': [
         'crm_view.xml',
+        'crm_data.xml',
     ],
     'application': False,
     'installable': True,

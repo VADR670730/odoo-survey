@@ -75,12 +75,12 @@
         <form string="Survey">
           <sheet>
             <group>
-              <field name="survey_id" />
+              <field name="survey_id" widget='selection' />
             </group>
           </sheet>
           <footer>
             <div>
-              <button name="confirm" string="Confirm" type="object" class="oe_highlight" />
+              <button name="confirm" string="Start" type="object" class="oe_highlight" />
               or
               <button special="cancel" string="Cancel" class="oe_link" />
             </div>
@@ -110,7 +110,7 @@
       <field name="inherit_id" ref="survey.survey_form" />
       <field name="arch" type="xml">
         <field name="auth_required" position="after">
-          <field name="model_id" />
+          <field name="model_id"  />
         </field>
       </field>
     </record>
