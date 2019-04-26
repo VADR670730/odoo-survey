@@ -32,7 +32,7 @@ class crm_lead(models.Model):
         self.survey_count = self.env['survey.user_input'].search_count([('lead_id', '=', self.id)])
     survey_count = fields.Integer(compute='_compute_survey_count',string="Surveys",)
 
-    @api.model
+    @api.multi
     def action_make_survey(self):
         """
         Open survey on current
@@ -42,6 +42,7 @@ class crm_lead(models.Model):
         this else list surveys. (res.partner if we come from res.partner)
         
         """
+        _logger.warn('self crm.lead %s' % self)        
         _logger.warn('context %s' % self._context)        
         return {
                 'type': 'ir.actions.act_window',
@@ -68,7 +69,7 @@ class crm_phonecall(models.Model):
     survey_count = fields.Integer(compute='_compute_survey_count',string="Surveys",)
 
 
-    @api.model
+    @api.multi
     def action_make_survey(self):
         """
         Open survey on current
@@ -78,8 +79,9 @@ class crm_phonecall(models.Model):
         this else list surveys. (res.partner if we come from res.partner)
         
         """
-        # ~ self.ensure_one()
-        _logger.warn('context %s' % self._context)        
+        self.ensure_one()
+        _logger.warn('phonecall_id %s' % self.id)        
+        _logger.warn('phonecall_id context %s' % self.with_context(phonecall_id=self.id)._context)        
         return {
                 'type': 'ir.actions.act_window',
                 'name':  'Open Survey',
@@ -90,7 +92,7 @@ class crm_phonecall(models.Model):
                 'view_mode': 'form',
                 # ~ 'view_id': self.onboard_stage_id.view_id.id,
                 'target': 'new',
-                'context': self._context,
+                'context': self.with_context(phonecall_id=self.id)._context,
             }
             
             
@@ -110,17 +112,17 @@ class crm_phonecall_survey_wizard(models.TransientModel):
     @api.multi
     def confirm(self):
         self.ensure_one()
-        _logger.warn('context %s' % self._context)
+        _logger.warn('survey context %s' % self._context)
+        record = {'survey_id': self.survey_id.id,'state': 'new'}
         if self._context.get('default_opportunity_id'):
-            response = self.env['survey.user_input'].create({'survey_id': self.survey_id.id, 
-                                'lead_id': self._context.get('default_opportunity_id'), 'state': 'new', 'phonecall_id': self._context.get('active_id')})
-            # ~ response = self.env['survey.user_input'].create({'survey_id': self.survey_id.id, 'lead_id': self._context.get('default_opportunity_id')})
+            record['lead_id'] = self._context.get('default_opportunity_id')
         elif self._context.get('default_lead_id'):
-            response = self.env['survey.user_input'].create({'survey_id': self.survey_id.id, 'lead_id': self._context.get('default_lead_id'), 'phonecall_id': self._context.get('active_id')})
-        elif self._context.get('default_partner_id'):
-            response = self.env['survey.user_input'].create({'survey_id': self.survey_id.id, 'partner_id': self._context.get('default_partner_id'), 'phonecall_id': self._context.get('active_id')})
-        else:
-            raise Warning('context %s' % self._context)
+            record['lead_id'] = self._context.get('default_lead_id')
+        if self._context.get('default_partner_id'):
+            record['partner_id'] = self._context.get('default_partner_id')
+        if self._context.get('phonecall_id'):
+            record['phonecall_id'] = self._context.get('phonecall_id')
+        response = self.env['survey.user_input'].create(record)
         return self.survey_id.with_context(survey_token=response.token).action_start_survey()
 
 
