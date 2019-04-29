@@ -45,10 +45,10 @@ class survey_user_input(models.Model):
         for line in self.user_input_line_ids.filtered(lambda l: not l.skipped):
             _logger.warn('--------------> Answer Type %s %s' % (line.question_id.display_name,line.answer_type))
             if line.answer_type == 'text':
-                if not values.get(line.question_id.fields_name or line.question_id.display_name,False):
+                if not values.get(line.question_id.fields_name or line.question_id.display_name, False):
                     values[line.question_id.fields_name or line.question_id.display_name]={'value': line.value_text if not line.skipped else None,'type': line.answer_type, 'question_id': line.question_id}
                 else:  # Concatenate strings when same name appears several times
-                    values[line.question_id.fields_name or line.question_id.display_name]['value'] += ' ' + line.value_text
+                    values[line.question_id.fields_name or line.question_id.display_name]['value'] = [values[line.question_id.fields_name or line.question_id.display_name]['value']] + [line.value_text]
             elif line.answer_type == 'free_text':
                 values[line.question_id.fields_name or line.question_id.display_name]={'value': line.value_free_text if not line.skipped else None,'type': line.answer_type, 'question_id': line.question_id }
             elif line.answer_type == 'number':
@@ -57,7 +57,10 @@ class survey_user_input(models.Model):
                 values[line.question_id.fields_name or line.question_id.display_name]={'value': line.value_date if not line.skipped else None,'type': line.answer_type, 'question_id': line.question_id }
             elif line.answer_type == 'suggestion':  # self.question_id.type ->  simple_choice, multiple_choice, matrix
                 if line.question_id.type == 'simple_choice':
-                    values[line.question_id.fields_name or line.question_id.display_name]={'value': line.value_suggested.tecnical_value,'type': line.question_id.type, 'question_id': line.question_id }
+                    if not values.get(line.question_id.fields_name or line.question_id.display_name, False):
+                        values[line.question_id.fields_name or line.question_id.display_name]={'value': line.value_suggested.tecnical_value,'type': line.question_id.type, 'question_id': line.question_id }
+                    else:  # Concatenate strings when same name appears several times
+                        values[line.question_id.fields_name or line.question_id.display_name]['value'] = [values[line.question_id.fields_name or line.question_id.display_name]['value']] + [line.value_suggested.tecnical_value]
                 if line.question_id.type == 'multiple_choice':
                     if values.get(line.question_id.fields_name or line.question_id.display_name,False):
                         values[line.question_id.fields_name or line.question_id.display_name]['value'].append(line.value_suggested.tecnical_value)
@@ -75,6 +78,7 @@ class survey_user_input(models.Model):
     
     @api.one
     def save_values(self,save_record): 
+        _logger.warn('<<<<<<<<< %s' %self.get_values())
         records = {}
         for key,value in self.get_values().items():
             if not '.' in key:
@@ -95,20 +99,42 @@ class survey_user_input(models.Model):
                 records[key.split('.')[0]][key.split('.')[1]] = value['value']
         for key in records:
             if key == 'main':
-                getattr(self,save_record).write(records[key])
-                _logger.warn('Main write %s' % records[key])
+                values = records[key]
+                for k,v in values.items():
+                    if type(v) == list:
+                       values[k] = ' '.join(n for n in v)
+                _logger.info('Main write %s' % values)
+                getattr(self, save_record).write(values)
             else:
                 if hasattr(getattr(self,save_record),key):
-                    
+                    odoo_field = self.env['ir.model.fields'].search([('name', '=', key), ('model_id.model', '=', getattr(self, save_record)._model._name)])
                     if not 'name' in records[key]: # if name is missing, use name from employee_id.name
                         # ~ _logger.warn('name is missing in record %s:%s adds %s' %(key,records[key],user_input.employee_id.name))
-                        records[key]['name'] = getattr(self,save_record).name
-                    if not getattr(getattr(self,save_record),key): # Attribute is None, create a record
-                        # ~ _logger.warn('Attribute is none %s:%s (create related record)' % (key,getattr(user_input.employee_id,key)))
-                        getattr(self,save_record).write({key: getattr(getattr(self,save_record),key).create(records[key]).id})
+                        records[key]['name'] = getattr(self, save_record).name
+                    if not getattr(getattr(self, save_record), key): # Attribute is None, create a record
+                        getattr(self, save_record).write({key: getattr(getattr(self,save_record),key).create(records[key]).id})
                     else:
-                        # ~ _logger.warn('Write record to attribute %s:%s' % (key,records[key]))
-                        getattr(getattr(self,save_record),key).write(records[key])
+                        if odoo_field:
+                            if odoo_field.ttype == 'one2many':
+                                _logger.warn('One2many: %s' %odoo_field)
+                                for r in getattr(getattr(self, save_record), key):
+                                    r.unlink()
+                                values = []
+                                l = 1
+                                for v in records.get(key).values():
+                                    if type(len(v)) == list and len(v) > l:
+                                        l = len(v)
+                                for i in range(0, l):
+                                    d = {}
+                                    for v in records.get(key).values():
+                                        if len(v) <= i+1:
+                                            for k in records.get(key).keys():
+                                                d[k] = v[i]
+                                    values.append(tuple((0, 0, d)))
+                                _logger.warn('------------ key: %s\nvalues: %s' %(key, values))
+                                getattr(self, save_record).write({key: values})
+                            else:
+                                getattr(getattr(self,save_record),key).write(records[key])
                 else:
                     _logger.error('Attribute is missing  %s:%s ' %(key,records[key]))
      
