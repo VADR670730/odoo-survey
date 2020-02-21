@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_survey" model="ir.ui.view">
+        <field name="name">survey.date</field>
+        <field name="model">survey.survey</field>
+        <field name="inherit_id" ref="survey.survey_form" />
+        <field name="arch" type="xml">
+            <field name="quizz_mode" position='after'>
+                <field name='date_start'/>
+                <field name='date_stop'/>
+            </field>
+        </field>
+    </record> 
+</odoo>
